@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { CqrsModule } from '@nestjs/cqrs';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
@@ -7,6 +8,8 @@ import { JwtStrategy } from './strategy/jwt.strategy';
 import { CaslAbilityFactory } from './casl-ability.factory';
 import { AuthApiService } from './services/auth-api.service';
 import { NoAuthService } from './services/no-auth.service';
+import { RefreshTokenService } from './services/refresh-token.service';
+import { CookieService } from './services/cookie.service';
 import { AUTH_COMMANDS } from './commands/handlers';
 import { AUTH_QUERIES } from './queries/handlers';
 import { GqlAuthGuard } from './guards/gql-auth.guard';
@@ -15,12 +18,20 @@ import { HttpAuthGuard } from './guards/http-auth.guard';
 import { OptionalHttpAuthGuard } from './guards/optional-http-auth.guard';
 
 @Module({
-  imports: [CqrsModule, DatabaseModule, PassportModule, JwtModule.register({ global: true })],
+  imports: [
+    CqrsModule,
+    ConfigModule,
+    DatabaseModule,
+    PassportModule,
+    JwtModule.register({ global: true }),
+  ],
   providers: [
     JwtStrategy,
     CaslAbilityFactory,
     AuthApiService,
     NoAuthService,
+    RefreshTokenService,
+    CookieService,
     GqlAuthGuard,
     OptionalGqlAuthGuard,
     HttpAuthGuard,
@@ -32,6 +43,8 @@ import { OptionalHttpAuthGuard } from './guards/optional-http-auth.guard';
     AuthApiService,
     CaslAbilityFactory,
     NoAuthService,
+    RefreshTokenService,
+    CookieService,
     GqlAuthGuard,
     OptionalGqlAuthGuard,
     HttpAuthGuard,

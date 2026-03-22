@@ -70,6 +70,7 @@ See [docs/getting-started.md](docs/getting-started.md) for detailed setup and fi
 | [MCP](docs/mcp.md) | MCP tools, Zod schemas, auth flow |
 | [OAuth](docs/oauth.md) | PKCE flow, token types, security |
 | [Auth & Permissions](docs/auth-and-permissions.md) | JWT, CASL, guards, roles |
+| [JWT Lifecycle](docs/jwt-lifecycle.md) | Token rotation, cookies, refresh, revocation |
 | [Prisma](docs/prisma.md) | Schema, migrations, seed, transactions |
 | [Caching](docs/caching.md) | In-memory cache, BentoCache upgrade path |
 | [Logging & Tracing](docs/logging-and-tracing.md) | Pino, trace IDs, structured logs |

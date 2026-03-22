@@ -23,6 +23,9 @@
 | Variable | Default | Description |
 |---|---|---|
 | `NO_AUTH` | `false` | Set to `true` to bypass JWT auth in development |
+| `JWT_REFRESH_TOKEN_TTL_DAYS` | `7` | Refresh token absolute expiry (days) |
+| `JWT_REFRESH_GRACE_PERIOD_MS` | `30000` | Grace period for multi-tab race conditions (0 = disabled) |
+| `COOKIE_SECURE` | auto | Cookie Secure flag (`true`/`false`, auto = based on NODE_ENV) |
 
 ## Cache
 

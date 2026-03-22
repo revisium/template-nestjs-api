@@ -58,6 +58,7 @@ export const ModelName = {
   OAuthAuthorizationCode: 'OAuthAuthorizationCode',
   OAuthAccessToken: 'OAuthAccessToken',
   OAuthRefreshToken: 'OAuthRefreshToken',
+  RefreshToken: 'RefreshToken',
   Task: 'Task'
 } as const
 
@@ -84,7 +85,8 @@ export const UserScalarFieldEnum = {
   email: 'email',
   username: 'username',
   password: 'password',
-  roleId: 'roleId'
+  roleId: 'roleId',
+  tokenVersion: 'tokenVersion'
 } as const
 
 export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
@@ -168,6 +170,19 @@ export const OAuthRefreshTokenScalarFieldEnum = {
 } as const
 
 export type OAuthRefreshTokenScalarFieldEnum = (typeof OAuthRefreshTokenScalarFieldEnum)[keyof typeof OAuthRefreshTokenScalarFieldEnum]
+
+
+export const RefreshTokenScalarFieldEnum = {
+  id: 'id',
+  tokenHash: 'tokenHash',
+  userId: 'userId',
+  familyId: 'familyId',
+  expiresAt: 'expiresAt',
+  revokedAt: 'revokedAt',
+  createdAt: 'createdAt'
+} as const
+
+export type RefreshTokenScalarFieldEnum = (typeof RefreshTokenScalarFieldEnum)[keyof typeof RefreshTokenScalarFieldEnum]
 
 
 export const TaskScalarFieldEnum = {

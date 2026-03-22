@@ -1,7 +1,10 @@
-import { ObjectType, Field } from '@nestjs/graphql';
+import { ObjectType, Field, Int } from '@nestjs/graphql';
 
 @ObjectType()
 export class LoginResponseModel {
+  @Field(() => Int)
+  expiresIn!: number;
+
   @Field()
-  accessToken!: string;
+  tokenType!: string;
 }

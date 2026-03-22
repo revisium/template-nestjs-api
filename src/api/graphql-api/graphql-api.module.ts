@@ -13,6 +13,7 @@ import { AuthResolver } from './auth/auth.resolver';
       autoSchemaFile: {
         federation: 2,
       },
+      context: ({ req, res }: { req: unknown; res: unknown }) => ({ req, res }),
     }),
     AuthModule,
     TaskModule,

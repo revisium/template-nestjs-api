@@ -1,4 +1,5 @@
 import { INestApplication } from '@nestjs/common';
+import request from 'supertest';
 import { PrismaService } from 'src/infrastructure/database/prisma.service';
 import {
   getTestApp,
@@ -9,6 +10,20 @@ import {
   gqlQuery,
   gqlRawQuery,
 } from '../utils';
+
+function extractCookies(res: request.Response): Record<string, string> {
+  const raw = res.headers['set-cookie'] as unknown as string[] | undefined;
+  if (!raw) return {};
+  const result: Record<string, string> = {};
+  for (const cookie of raw) {
+    const [nameValue] = cookie.split(';');
+    const eqIndex = nameValue!.indexOf('=');
+    if (eqIndex > 0) {
+      result[nameValue!.substring(0, eqIndex)] = nameValue!.substring(eqIndex + 1);
+    }
+  }
+  return result;
+}
 
 describe('GraphQL API (E2E)', () => {
   let app: INestApplication;
@@ -55,6 +70,103 @@ describe('GraphQL API (E2E)', () => {
     });
   });
 
+  describe('JWT Lifecycle (cookies via GraphQL)', () => {
+    it('login mutation should set cookies and return expiresIn', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/graphql')
+        .send({
+          query: `mutation Login($data: LoginInput!) { login(data: $data) { expiresIn tokenType } }`,
+          variables: { data: { email: fixture.userEmail, password: fixture.userPassword } },
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.login.expiresIn).toBeDefined();
+      expect(res.body.data.login.tokenType).toBe('cookie');
+
+      const cookies = extractCookies(res);
+      expect(cookies['rev_at']).toBeDefined();
+      expect(cookies['rev_rt']).toBeDefined();
+    });
+
+    it('me query should work with cookie from login', async () => {
+      const loginRes = await request(app.getHttpServer())
+        .post('/graphql')
+        .send({
+          query: `mutation Login($data: LoginInput!) { login(data: $data) { expiresIn tokenType } }`,
+          variables: { data: { email: fixture.userEmail, password: fixture.userPassword } },
+        });
+
+      const cookies = extractCookies(loginRes);
+
+      const meRes = await request(app.getHttpServer())
+        .post('/graphql')
+        .set('Cookie', `rev_at=${cookies['rev_at']}`)
+        .send({ query: `query { me { id email } }` });
+
+      expect(meRes.body.data.me.id).toBe(fixture.userId);
+    });
+
+    it('refreshToken mutation should rotate tokens', async () => {
+      const loginRes = await request(app.getHttpServer())
+        .post('/graphql')
+        .send({
+          query: `mutation Login($data: LoginInput!) { login(data: $data) { expiresIn tokenType } }`,
+          variables: { data: { email: fixture.userEmail, password: fixture.userPassword } },
+        });
+
+      const loginCookies = extractCookies(loginRes);
+
+      const refreshRes = await request(app.getHttpServer())
+        .post('/graphql')
+        .set('Cookie', `rev_rt=${loginCookies['rev_rt']}`)
+        .send({ query: `mutation { refreshToken { expiresIn tokenType } }` });
+
+      expect(refreshRes.body.data.refreshToken.expiresIn).toBeDefined();
+
+      const refreshCookies = extractCookies(refreshRes);
+      expect(refreshCookies['rev_at']).toBeDefined();
+      expect(refreshCookies['rev_rt']).toBeDefined();
+      expect(refreshCookies['rev_rt']).not.toBe(loginCookies['rev_rt']);
+    });
+
+    it('refreshToken without cookie should return error', async () => {
+      const result = await gqlRawQuery({
+        app,
+        query: `mutation { refreshToken { expiresIn tokenType } }`,
+      });
+
+      expect(result.errors).toBeDefined();
+    });
+
+    it('logout mutation should return true', async () => {
+      const loginRes = await request(app.getHttpServer())
+        .post('/graphql')
+        .send({
+          query: `mutation Login($data: LoginInput!) { login(data: $data) { expiresIn tokenType } }`,
+          variables: { data: { email: fixture.userEmail, password: fixture.userPassword } },
+        });
+
+      const cookies = extractCookies(loginRes);
+
+      const logoutRes = await request(app.getHttpServer())
+        .post('/graphql')
+        .set('Cookie', `rev_at=${cookies['rev_at']}; rev_rt=${cookies['rev_rt']}`)
+        .send({ query: `mutation { logout }` });
+
+      expect(logoutRes.body.data.logout).toBe(true);
+    });
+
+    it('me should work with Bearer header (backwards compatible)', async () => {
+      const result = await gqlQuery<{ me: { id: string } }>({
+        app,
+        token: adminToken,
+        query: `query { me { id email } }`,
+      });
+
+      expect(result.me.id).toBe(fixture.userId);
+    });
+  });
+
   describe('Query: task', () => {
     it('should return a task by id', async () => {
       const result = await gqlQuery<{ task: { id: string; title: string } }>({
@@ -88,11 +200,7 @@ describe('GraphQL API (E2E)', () => {
         query: `
           query GetTasks {
             tasks {
-              items {
-                id
-                title
-                status
-              }
+              items { id title status }
               totalCount
             }
           }
@@ -111,9 +219,7 @@ describe('GraphQL API (E2E)', () => {
         token: adminToken,
         query: `
           mutation CreateTask($data: CreateTaskInput!) {
-            createTask(data: $data) {
-              id
-            }
+            createTask(data: $data) { id }
           }
         `,
         variables: { data: { title: 'GraphQL E2E Task' } },
@@ -130,14 +236,10 @@ describe('GraphQL API (E2E)', () => {
         token: adminToken,
         query: `
           mutation UpdateTask($data: UpdateTaskInput!) {
-            updateTask(data: $data) {
-              id
-            }
+            updateTask(data: $data) { id }
           }
         `,
-        variables: {
-          data: { taskId: fixture.taskId, title: 'Updated via GraphQL' },
-        },
+        variables: { data: { taskId: fixture.taskId, title: 'Updated via GraphQL' } },
       });
 
       expect(result.updateTask.id).toBe(fixture.taskId);
@@ -149,26 +251,14 @@ describe('GraphQL API (E2E)', () => {
       const created = await gqlQuery<{ createTask: { id: string } }>({
         app,
         token: adminToken,
-        query: `
-          mutation CreateTask($data: CreateTaskInput!) {
-            createTask(data: $data) {
-              id
-            }
-          }
-        `,
+        query: `mutation CreateTask($data: CreateTaskInput!) { createTask(data: $data) { id } }`,
         variables: { data: { title: 'To Be Deleted GQL' } },
       });
 
       const result = await gqlQuery<{ deleteTask: { success: boolean } }>({
         app,
         token: adminToken,
-        query: `
-          mutation DeleteTask($taskId: String!) {
-            deleteTask(taskId: $taskId) {
-              success
-            }
-          }
-        `,
+        query: `mutation DeleteTask($taskId: String!) { deleteTask(taskId: $taskId) { success } }`,
         variables: { taskId: created.createTask.id },
       });
 

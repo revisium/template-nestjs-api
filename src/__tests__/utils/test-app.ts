@@ -1,5 +1,6 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import cookieParser from 'cookie-parser';
 import { AppModule } from 'src/app.module';
 
 let cachedApp: INestApplication | null = null;
@@ -14,6 +15,7 @@ export async function getTestApp(): Promise<INestApplication> {
   }).compile();
 
   cachedApp = moduleFixture.createNestApplication();
+  cachedApp.use(cookieParser());
   cachedApp.useGlobalPipes(
     new ValidationPipe({
       transform: true,
