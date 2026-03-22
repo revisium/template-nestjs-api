@@ -210,6 +210,61 @@ describe('REST API (E2E)', () => {
 });
 ```
 
+## Cookie-Based Auth Tests
+
+Test JWT lifecycle with httpOnly cookies using supertest:
+
+```typescript
+function extractCookies(res: request.Response): Record<string, string> {
+  const raw = res.headers['set-cookie'] as unknown as string[];
+  const result: Record<string, string> = {};
+  for (const cookie of raw) {
+    const [nameValue] = cookie.split(';');
+    const eqIndex = nameValue!.indexOf('=');
+    if (eqIndex > 0) {
+      result[nameValue!.substring(0, eqIndex)] = nameValue!.substring(eqIndex + 1);
+    }
+  }
+  return result;
+}
+
+it('full login → me → refresh → logout lifecycle', async () => {
+  const loginRes = await request(app.getHttpServer())
+    .post('/api/auth/login')
+    .send({ email: fixture.userEmail, password: fixture.userPassword });
+
+  const cookies = extractCookies(loginRes);
+  expect(cookies['rev_at']).toBeDefined();
+  expect(cookies['rev_rt']).toBeDefined();
+
+  const meRes = await request(app.getHttpServer())
+    .get('/api/auth/me')
+    .set('Cookie', `rev_at=${cookies['rev_at']}`);
+  expect(meRes.body.id).toBeDefined();
+
+  const refreshRes = await request(app.getHttpServer())
+    .post('/api/auth/refresh')
+    .set('Cookie', `rev_rt=${cookies['rev_rt']}`);
+  const newCookies = extractCookies(refreshRes);
+  expect(newCookies['rev_rt']).not.toBe(cookies['rev_rt']);
+
+  const logoutRes = await request(app.getHttpServer())
+    .post('/api/auth/logout')
+    .set('Cookie', `rev_rt=${newCookies['rev_rt']}`);
+  expect(logoutRes.status).toBe(204);
+});
+```
+
+Key test scenarios:
+- Login → cookies set
+- Me with cookie → 200
+- Refresh → rotation (new cookies)
+- Refresh without cookie → 401
+- Refresh with reused token → reuse detection
+- Logout → cookies cleared
+- Bearer header still works
+- Expired JWT → 401
+
 ## Test Utilities
 
 | File | Purpose |

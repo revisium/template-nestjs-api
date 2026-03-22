@@ -57,6 +57,8 @@ All three layers call the same `*ApiService` facade. Business logic lives **only
 - MCP: `auth.userId` from `McpAuthHelpers` inside tool handler
 - Optional variants: `OptionalGqlAuthGuard`, `OptionalHttpAuthGuard`
 - Permission decorator: `@PermissionParams({ action, subject })`
+- **Cookies**: Login sets httpOnly `rev_at` + `rev_rt` cookies; `/api/auth/refresh` rotates both
+- **Token versioning**: `user.tokenVersion` in JWT `ver` claim — increment to revoke all sessions
 
 ### OAuth (for MCP clients)
 

@@ -2,15 +2,36 @@
 
 ## JWT Authentication
 
-- Strategy: `passport-jwt` with Bearer token
-- Secret: `JWT_SECRET` environment variable
-- Token expiry: 24 hours
+Access tokens (30 min) stored in httpOnly cookies. Refresh tokens (7 days) enable seamless renewal.
 
-### Login Flow
+### Auth Flow
 
-1. `POST /api/auth/login` or `mutation { login(...) }`
-2. Validates email + bcrypt password
-3. Returns JWT with payload: `{ sub, email, username, roleId }`
+1. `POST /api/auth/login` → sets `rev_at` + `rev_rt` cookies
+2. Browser sends cookies automatically on all `/api/*` requests
+3. Before access token expires, `POST /api/auth/refresh` rotates both tokens
+4. `POST /api/auth/logout` clears cookies and revokes token family
+
+### Dual Auth (Cookies + Bearer)
+
+| Consumer | Auth method | Transport |
+|---|---|---|
+| Browser (admin UI) | httpOnly cookies | Automatic |
+| MCP clients | OAuth `oat_` token | `Authorization: Bearer` |
+| API consumers | JWT or PAT | `Authorization: Bearer` |
+
+Bearer header takes priority over cookies.
+
+### Token Versioning
+
+Increment `user.tokenVersion` to revoke all sessions instantly:
+```typescript
+await prisma.user.update({
+  where: { id: userId },
+  data: { tokenVersion: { increment: 1 } },
+});
+```
+
+See [JWT Lifecycle docs](jwt-lifecycle.md) for full details.
 
 ## Guards
 

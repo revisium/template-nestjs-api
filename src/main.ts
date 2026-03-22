@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './infrastructure/filters/global-exception.filter';
 import { initSwagger } from './api/rest-api/init-swagger';
@@ -11,6 +12,8 @@ async function bootstrap() {
     bodyParser: true,
     rawBody: true,
   });
+
+  app.use(cookieParser());
 
   app.useGlobalPipes(
     new ValidationPipe({

@@ -63,6 +63,17 @@
 - [ ] `@PermissionParams` at class level for default, method level for overrides
 - [ ] New subjects added to `PermissionSubject` enum and seeded
 
+## JWT & Cookies
+
+- [ ] Login sets `rev_at` and `rev_rt` httpOnly cookies
+- [ ] Login response contains `expiresIn` and `tokenType: "cookie"` (no token in body)
+- [ ] Refresh rotates both tokens (new cookies, old refresh revoked)
+- [ ] Logout clears cookies and revokes token family
+- [ ] Bearer header still works alongside cookies
+- [ ] `tokenVersion` included in JWT `ver` claim
+- [ ] Expired JWT returns 401
+- [ ] Revoked refresh token triggers family revocation (after grace period)
+
 ## Database
 
 - [ ] New models have `@id @default(nanoid())`, `createdAt`, `updatedAt`
