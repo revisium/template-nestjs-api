@@ -1,9 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ForbiddenException } from '@nestjs/common';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { CaslAbilityFactory } from 'src/features/auth/casl-ability.factory';
 import { McpAuthHelpers, McpUserContext } from './types';
 import { TaskTools } from './tools/task.tools';
-import { ForbiddenException } from '@nestjs/common';
 
 @Injectable()
 export class McpServerService {

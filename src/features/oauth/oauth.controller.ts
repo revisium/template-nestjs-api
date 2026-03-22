@@ -16,6 +16,16 @@ import { OAuthAuthorizationService } from './oauth-authorization.service';
 import { OAuthTokenService } from './oauth-token.service';
 import { IAuthUser } from 'src/features/auth/types';
 
+class AuthorizeQueryDto {
+  client_id!: string;
+  redirect_uri!: string;
+  code_challenge!: string;
+  code_challenge_method!: string;
+  response_type!: string;
+  state!: string;
+  scope!: string;
+}
+
 @ApiExcludeController()
 @Controller()
 export class OAuthController {
@@ -77,39 +87,30 @@ export class OAuthController {
   }
 
   @Get('oauth/authorize')
-  async authorizeGet(
-    @Query('client_id') clientId: string,
-    @Query('redirect_uri') redirectUri: string,
-    @Query('code_challenge') codeChallenge: string,
-    @Query('code_challenge_method') codeChallengeMethod: string,
-    @Query('response_type') responseType: string,
-    @Query('state') state: string,
-    @Query('scope') scope: string,
-    @Res() res: Response,
-  ) {
-    if (responseType !== 'code') {
+  async authorizeGet(@Query() query: AuthorizeQueryDto, @Res() res: Response) {
+    if (query.response_type !== 'code') {
       throw new BadRequestException('response_type must be "code"');
     }
-    if (codeChallengeMethod !== 'S256') {
+    if (query.code_challenge_method !== 'S256') {
       throw new BadRequestException('code_challenge_method must be "S256"');
     }
 
-    const client = await this.clientService.findClient(clientId);
+    const client = await this.clientService.findClient(query.client_id);
     if (!client) {
       throw new BadRequestException('Unknown client_id');
     }
-    if (!client.redirectUris.includes(redirectUri)) {
+    if (!client.redirectUris.includes(query.redirect_uri)) {
       throw new BadRequestException('Invalid redirect_uri');
     }
 
     const publicUrl = process.env['PUBLIC_URL'] || 'http://localhost:8080';
     const params = new URLSearchParams({
-      client_id: clientId,
+      client_id: query.client_id,
       client_name: client.clientName,
-      redirect_uri: redirectUri,
-      code_challenge: codeChallenge,
-      state: state || '',
-      scope: scope || '',
+      redirect_uri: query.redirect_uri,
+      code_challenge: query.code_challenge,
+      state: query.state || '',
+      scope: query.scope || '',
     });
     res.redirect(`${publicUrl}/authorize?${params.toString()}`);
   }

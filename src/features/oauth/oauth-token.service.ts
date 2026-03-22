@@ -1,5 +1,5 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { createHash, randomBytes } from 'crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { PrismaService } from 'src/infrastructure/database/prisma.service';
 
 const TOKEN_BYTE_LENGTH = 36;
@@ -123,7 +123,7 @@ export class OAuthTokenService {
       where: { tokenHash },
     });
 
-    if (!token || token.clientId !== clientId || token.revokedAt || token.expiresAt < new Date()) {
+    if (token?.clientId !== clientId || token.revokedAt || token.expiresAt < new Date()) {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
@@ -168,7 +168,7 @@ export class OAuthTokenService {
 
   private getMcpAccessTokenExpiryMs(): number {
     const envDays = process.env['MCP_ACCESS_TOKEN_EXPIRY_DAYS'];
-    const days = envDays ? parseInt(envDays, 10) : MCP_ACCESS_TOKEN_EXPIRY_DAYS;
+    const days = envDays ? Number.parseInt(envDays, 10) : MCP_ACCESS_TOKEN_EXPIRY_DAYS;
     return (
       (days > 0 ? days : MCP_ACCESS_TOKEN_EXPIRY_DAYS) *
       HOURS_PER_DAY *

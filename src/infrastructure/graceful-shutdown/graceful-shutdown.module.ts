@@ -9,8 +9,8 @@ export class GracefulShutdownModule implements OnApplicationShutdown {
   async onApplicationShutdown(signal?: string) {
     this.logger.log(`Application shutting down (signal: ${signal || 'unknown'})`);
     const envValue = process.env['GRACEFUL_SHUTDOWN_TIMEOUT'];
-    const parsed = envValue !== undefined ? Number(envValue) : NaN;
-    const timeout = !Number.isNaN(parsed) && parsed >= 0 ? parsed : DEFAULT_SHUTDOWN_TIMEOUT;
+    const parsed = envValue !== undefined ? Number(envValue) : Number.NaN;
+    const timeout = Number.isNaN(parsed) || parsed < 0 ? DEFAULT_SHUTDOWN_TIMEOUT : parsed;
     await new Promise((resolve) => setTimeout(resolve, timeout));
   }
 }

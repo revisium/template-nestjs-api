@@ -48,7 +48,7 @@ async function main() {
             create: roleData.permissions.map((p) => ({
               action: p.action,
               subject: p.subject,
-              condition: p.condition ? JSON.parse(JSON.stringify(p.condition)) : undefined,
+              condition: p.condition ? structuredClone(p.condition) : undefined,
             })),
           },
         },

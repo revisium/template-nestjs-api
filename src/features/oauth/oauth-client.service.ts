@@ -1,5 +1,5 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-import { createHash, randomBytes, timingSafeEqual } from 'crypto';
+import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { PrismaService } from 'src/infrastructure/database/prisma.service';
 
 const SECRET_BYTE_LENGTH = 36;
