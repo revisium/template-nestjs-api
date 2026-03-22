@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ClsModule } from 'nestjs-cls';
 import { LoggerModule as PinoLoggerModule } from 'nestjs-pino';
-import { randomUUID } from 'crypto';
+import { randomUUID } from 'node:crypto';
 
 @Module({
   imports: [
@@ -21,9 +21,9 @@ import { randomUUID } from 'crypto';
       pinoHttp: {
         level: process.env['LOG_LEVEL'] || 'info',
         transport:
-          process.env['NODE_ENV'] !== 'production'
-            ? { target: 'pino-pretty', options: { colorize: true } }
-            : undefined,
+          process.env['NODE_ENV'] === 'production'
+            ? undefined
+            : { target: 'pino-pretty', options: { colorize: true } },
         autoLogging: false,
       },
     }),
