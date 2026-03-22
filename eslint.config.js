@@ -5,7 +5,7 @@ const tseslint = require('typescript-eslint');
 const prettierPlugin = require('eslint-plugin-prettier');
 const sonarjsPlugin = require('eslint-plugin-sonarjs');
 
-/** @type {import('eslint').Linter.FlatConfig[]} */
+/** @type {import('eslint').Linter.Config[]} */
 module.exports = [
   js.configs.recommended,
   ...tseslint.configs.recommended,
