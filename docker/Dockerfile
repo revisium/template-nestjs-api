@@ -5,7 +5,10 @@ WORKDIR /home/app
 COPY package*.json ./
 RUN npm ci --ignore-scripts && npm rebuild bcrypt
 
-COPY . .
+COPY src/ ./src/
+COPY prisma/ ./prisma/
+COPY prisma.config.ts tsconfig.json tsconfig.build.json nest-cli.json ./
+COPY revisium/ ./revisium/
 RUN npm run build
 
 # ---
