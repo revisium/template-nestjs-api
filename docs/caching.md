@@ -4,164 +4,187 @@
 
 ```
 CacheModule.forRoot()
-├── CacheService (in-memory, tag-based)  — when CACHE_ENABLED=true
-├── NoopCacheService (pass-through)      — when CACHE_ENABLED=false
-└── AuthCacheService (permission cache)  — always available
+├── BentoCache (L1 memory + optional L2 Redis + bus)  — when CACHE_ENABLED=true
+├── NoopCacheService (pass-through)                    — when CACHE_ENABLED=false
+├── CacheService (wrapper: getOrSet, deleteByTag, delete, disconnect)
+├── AuthCacheService (permission caching)
+├── TaskCacheService (domain cache example)
+└── Event handlers (cache invalidation on CQRS events)
 ```
 
-## ICacheService Interface
+## CacheService
+
+Wraps BentoCache with error unwrapping and graceful disconnect:
 
 ```typescript
-interface ICacheService {
-  getOrSet<T>(options: {
+@Injectable()
+export class CacheService implements OnModuleDestroy {
+  public async getOrSet<T>(options: {
     key: string;
-    ttlMs?: number;
+    ttl?: string;
     tags?: string[];
     factory: () => Promise<T>;
-  }): Promise<T>;
-  get<T>(key: string): Promise<T | undefined>;
-  set<T>(key: string, value: T, ttlMs?: number, tags?: string[]): Promise<void>;
-  delete(key: string): Promise<void>;
-  deleteByTag(tag: string): Promise<void>;
-  clear(): Promise<void>;
+  }): Promise<T> { ... }
+
+  public deleteByTag(options: { tags: string[] }) { ... }
+  public delete(options: { key: string }) { ... }
+  async onModuleDestroy() { await this.bento.disconnect(); }
 }
 ```
 
 ## Tag-Based Invalidation
 
-Every cached value can have **tags**. Calling `deleteByTag(tag)` removes all entries with that tag:
+Every cached value can have **tags**. Calling `deleteByTag({ tags })` removes all entries with those tags:
 
 ```typescript
-// Set with tags
-await cache.set('user:123', userData, 60000, ['users', 'user:123']);
+await cache.getOrSet({
+  key: 'task:123',
+  ttl: '5m',
+  tags: ['task-relatives', 'task:123'],
+  factory: () => prisma.task.findUnique({ where: { id: '123' } }),
+});
 
-// Invalidate all user caches
-await cache.deleteByTag('users');
-
-// Invalidate specific user
-await cache.deleteByTag('user:123');
+await cache.deleteByTag({ tags: ['task:123'] });
+await cache.deleteByTag({ tags: ['task-relatives'] });
 ```
 
-## AuthCacheService (Built-in)
+## Stable Cache Keys
 
-Caches role permissions to avoid repeated DB queries:
+Use `makeCacheKeyFromArgs()` for deterministic keys from query parameters:
+
+```typescript
+import { makeCacheKeyFromArgs } from 'src/infrastructure/cache/utils/stable-cache-key';
+
+const key = makeCacheKeyFromArgs([{ userId: 'u1', status: 'PENDING' }], {
+  prefix: 'task:get-tasks',
+  version: 1,
+});
+```
+
+Features:
+- Canonicalizes objects (sorts keys, removes undefined)
+- SHA-256 hashes the JSON representation
+- Version field enables cache invalidation on format changes
+
+## AuthCacheService
+
+Caches role permissions and system permission checks:
+
+```typescript
+const permissions = await authCache.rolePermissions('admin', () =>
+  prisma.permission.findMany({ where: { roleId: 'admin' } }),
+);
+
+await authCache.checkSystemPermission({ userId }, () =>
+  ability.can(action, subject),
+);
+
+await authCache.invalidateUserPermissions(userId);
+await authCache.invalidateAllAuthCaches();
+```
+
+## Domain Cache (TaskCacheService Example)
+
+Pattern for domain-specific caching:
 
 ```typescript
 @Injectable()
-export class CaslAbilityFactory {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly authCache: AuthCacheService,
-  ) {}
+export class TaskCacheService {
+  constructor(private readonly cache: CacheService) {}
 
-  async createAbility(roleId: string): Promise<MongoAbility> {
-    // Cached for 24h, tagged for targeted invalidation
-    const permissions = await this.authCache.rolePermissions(roleId, () =>
-      this.prisma.permission.findMany({ where: { roleId } }),
-    );
-    // ... build CASL ability
-  }
-}
-```
-
-Invalidation:
-```typescript
-// When role permissions change
-await authCacheService.invalidateRole('editor');
-
-// Nuclear: clear all auth caches
-await authCacheService.invalidateAll();
-```
-
-## Creating Domain-Specific Cache Services
-
-Follow the AuthCacheService pattern:
-
-```typescript
-@Injectable()
-export class ProductCacheService {
-  constructor(@Inject(CACHE_SERVICE_TOKEN) private readonly cache: ICacheService) {}
-
-  async getProduct<T>(productId: string, factory: () => Promise<T>): Promise<T> {
+  public async task<T>(taskId: string, factory: () => Promise<T>) {
     return this.cache.getOrSet({
-      key: `product:${productId}`,
-      ttlMs: 300000, // 5 minutes
-      tags: ['products', `product:${productId}`],
+      key: TASK_CACHE_KEYS.TASK(taskId),
+      ttl: TASK_CACHE_CONFIG.TASK_TTL,
+      tags: [TASK_CACHE_TAGS.TASK_RELATIVES, TASK_CACHE_TAGS.TASK(taskId)],
       factory,
     });
   }
 
-  async invalidateProduct(productId: string): Promise<void> {
-    await this.cache.deleteByTag(`product:${productId}`);
+  public async invalidateTask(taskId: string) {
+    await this.cache.deleteByTag({ tags: [TASK_CACHE_TAGS.TASK(taskId)] });
   }
 
-  async invalidateAll(): Promise<void> {
-    await this.cache.deleteByTag('products');
+  public async invalidateGetTasks() {
+    await this.cache.deleteByTag({ tags: [TASK_CACHE_TAGS.TASK_RELATIVES] });
   }
 }
 ```
 
-Register in `CacheModule`:
+Usage in API service:
 ```typescript
-providers: [
-  { provide: CACHE_SERVICE_TOKEN, useClass: ... },
-  AuthCacheService,
-  ProductCacheService,  // Add here
-],
-exports: [CACHE_SERVICE_TOKEN, AuthCacheService, ProductCacheService],
+async getTask(data: { taskId: string }) {
+  return this.taskCache.task(data.taskId, () =>
+    this.queryBus.execute(new GetTaskQuery(data)),
+  );
+}
 ```
-
-## Cache Key Conventions
-
-| Pattern | Example | Use Case |
-|---|---|---|
-| `domain:id` | `auth:role:permissions:admin` | Single resource |
-| `domain:scope:id` | `product:org:123:list` | Scoped resource |
-
-## Tag Conventions
-
-| Level | Tag | Invalidation |
-|---|---|---|
-| **Nuclear** | `auth` | All auth caches |
-| **Scope** | `auth:role:admin` | All caches for admin role |
-| **Resource** | `product:123` | Single product |
-
-## TTL Strategy
-
-| Type | TTL | Rationale |
-|---|---|---|
-| Role permissions | 24h | Roles change rarely |
-| User session data | 10min | Needs freshness |
-| Immutable data | 24h+ | Never changes |
-| External API data | 5-10min | May update externally |
 
 ## Event-Driven Invalidation
 
-Use CQRS events to trigger cache invalidation:
+Command handlers publish CQRS events, cache handlers invalidate:
 
 ```typescript
-@EventsHandler(PermissionsUpdatedEvent)
-export class PermissionsUpdatedCacheHandler {
-  constructor(private readonly authCache: AuthCacheService) {}
-
-  async handle(event: PermissionsUpdatedEvent) {
-    await this.authCache.invalidateRole(event.roleId);
+@CommandHandler(CreateTaskCommand)
+export class CreateTaskHandler {
+  async execute({ data }: CreateTaskCommand) {
+    const task = await this.prisma.task.create({ data });
+    this.eventBus.publish(new TaskCreatedEvent(task.id, data.userId));
+    return { id: task.id };
   }
 }
+
+@EventsHandler(TaskCreatedEvent)
+export class TaskCreatedCacheHandler {
+  async handle(_event: TaskCreatedEvent) {
+    await this.taskCache.invalidateGetTasks();
+  }
+}
+```
+
+Event → handler mapping:
+| Event | Cache Invalidation |
+|---|---|
+| `TaskCreatedEvent` | `invalidateGetTasks()` |
+| `TaskUpdatedEvent` | `invalidateTask(id)` + `invalidateGetTasks()` |
+| `TaskDeletedEvent` | `invalidateTask(id)` + `invalidateGetTasks()` |
+
+## Cache Constants
+
+Organize keys, tags, and config per domain:
+
+```typescript
+export const TASK_CACHE_KEYS = {
+  TASK: (taskId: string) => `task:${taskId}`,
+  GET_TASKS: 'task:get-tasks',
+} as const;
+
+export const TASK_CACHE_TAGS = {
+  TASK_RELATIVES: 'task-relatives',
+  TASK: (taskId: string) => `task:${taskId}`,
+} as const;
+
+export const TASK_CACHE_CONFIG = {
+  TASK_TTL: '5m' as const,
+  GET_TASKS_TTL: '1m' as const,
+  KEY_VERSION: 1 as const,
+} as const;
 ```
 
 ## Configuration
 
 | Env Variable | Default | Description |
 |---|---|---|
-| `CACHE_ENABLED` | `false` | Enable in-memory caching |
+| `CACHE_ENABLED` | `false` | Enable BentoCache |
+| `CACHE_L1_MAX_SIZE` | `128mb` | Memory cache size |
+| `CACHE_L2_REDIS_URL` | — | Redis URL for L2 layer |
+| `CACHE_BUS_HOST` | — | Redis host for distributed invalidation |
+| `CACHE_BUS_PORT` | — | Redis port for distributed invalidation |
 
-When disabled, `NoopCacheService` is injected — `getOrSet` calls factory directly, all other operations are no-ops.
+## Modes
 
-## Upgrading to BentoCache (L1 + L2)
-
-For production with multiple instances, replace `CacheService` with BentoCache:
-1. Add `bentocache` and `ioredis` dependencies
-2. Configure L1 (memory) + L2 (Redis) + bus (Redis)
-3. Replace `CacheService` implementation
-4. See BentoCache documentation for the full L1+L2+bus pattern
+| Mode | Layers | Use Case |
+|---|---|---|
+| Disabled (`CACHE_ENABLED=false`) | NoopCacheService | Development, testing |
+| L1 only | Memory | Single instance, no Redis |
+| L1 + L2 + Bus | Memory + Redis + Redis Bus | Multi-instance production |

@@ -28,3 +28,9 @@ coverage/
 
 # Test
 test-results/
+
+# Revisium standalone data
+revisium/data/
+
+# Generated dictionary API client
+src/features/dictionary/generated/

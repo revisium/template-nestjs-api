@@ -79,3 +79,18 @@ Create `src/features/project/commands/handlers/__tests__/` with handler specs.
 ## 8. Import Module
 
 Add `ProjectModule` to `app.module.ts` imports.
+
+## 9. Events + Cache (optional)
+
+If the domain needs caching:
+
+1. Create events in `src/features/<name>/events/impl/`
+2. Create cache service in `src/infrastructure/cache/services/<name>-cache.service.ts`
+3. Create cache constants in `src/infrastructure/cache/constants/<name>-cache.constants.ts`
+4. Create cache event handlers in `src/infrastructure/cache/handlers/`
+5. Register handlers in `src/infrastructure/cache/handlers/index.ts`
+6. Register cache service in `CacheModule`
+7. Publish events in command handlers via `EventBus`
+8. Wrap queries in API service with cache service
+
+See [Caching docs](caching.md) for the full pattern.

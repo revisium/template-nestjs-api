@@ -30,11 +30,25 @@ See `docs/` for detailed documentation:
 
 ### 3 API Layers (same domain, different transport)
 
-- **GraphQL**: `src/api/graphql-api/{name}/` — resolvers + models + inputs (Apollo Federation v2)
+- **GraphQL**: `src/api/graphql-api/{name}/` — resolvers + models + inputs (Yoga Federation v2)
 - **REST**: `src/api/rest-api/{name}/` — controllers + DTOs + Swagger models
 - **MCP**: `src/api/mcp-api/tools/{name}.tools.ts` — tool registrars with Zod schemas
 
 All three layers call the same `*ApiService` facade. Business logic lives **only** in command/query handlers.
+
+### Dictionary Service (Revisium integration)
+
+- `src/features/dictionary/` — proxy + API service for Revisium data
+- `revisium/migrations.json` — schema migrations (committed to git)
+- `npm run revisium:standalone` — start local Revisium (port 8888, embedded PG on 5441)
+- `npm run revisium:save-migrations` / `revisium:apply-migrations` — manage schema
+
+### Cache + Events
+
+- BentoCache (L1 memory + optional L2 Redis) via `CacheModule.forRoot()`
+- Domain cache services: `src/infrastructure/cache/services/*-cache.service.ts`
+- Event-driven invalidation: command → `eventBus.publish()` → cache handler → `invalidate*()`
+- Stable cache keys: `makeCacheKeyFromArgs()` from `src/infrastructure/cache/utils/`
 
 ### Auth Guards
 

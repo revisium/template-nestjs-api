@@ -5,7 +5,7 @@ Production-ready NestJS backend template with CQRS, three API layers, and enterp
 ## Features
 
 - **CQRS** — Command/Query separation with `@nestjs/cqrs`
-- **GraphQL** — Apollo Federation v2, code-first, Apollo Sandbox
+- **GraphQL** — Yoga Federation v2, code-first, GraphiQL
 - **REST API** — Swagger/OpenAPI documentation
 - **MCP** — Model Context Protocol for AI agent integration
 - **OAuth** — PKCE authorization code flow (for MCP clients)
@@ -50,7 +50,7 @@ npm run start:dev
 ```
 
 After startup:
-- **GraphQL**: http://localhost:8080/graphql (Apollo Sandbox)
+- **GraphQL**: http://localhost:8080/graphql (GraphiQL)
 - **REST API**: http://localhost:8080/api (Swagger UI)
 - **Health**: http://localhost:8080/health
 
@@ -65,7 +65,7 @@ See [docs/getting-started.md](docs/getting-started.md) for detailed setup and fi
 | [Getting Started](docs/getting-started.md) | Prerequisites, setup, first request |
 | [Architecture](docs/architecture.md) | Layers, data flow, module organization |
 | [CQRS](docs/cqrs.md) | Commands, queries, events, API service facade |
-| [GraphQL](docs/graphql.md) | Apollo Federation setup, resolvers, models, inputs |
+| [GraphQL](docs/graphql.md) | Yoga Federation setup, resolvers, models, inputs |
 | [REST API](docs/rest-api.md) | Swagger, controllers, DTOs, validation |
 | [MCP](docs/mcp.md) | MCP tools, Zod schemas, auth flow |
 | [OAuth](docs/oauth.md) | PKCE flow, token types, security |
@@ -81,6 +81,7 @@ See [docs/getting-started.md](docs/getting-started.md) for detailed setup and fi
 | [SonarQube](docs/sonarqube.md) | SonarCloud setup, quality gates |
 | [Environment Variables](ENV.md) | Complete env var reference (root file) |
 | [Adding a New Domain](docs/adding-new-domain.md) | Step-by-step guide |
+| [Dictionary Service](docs/dictionary-service.md) | Revisium integration, migrations, standalone |
 | [Adding MCP Tools](docs/adding-mcp-tools.md) | Tool creation guide |
 | [Deployment](docs/deployment.md) | K8s manifests, production checklist |
 | [Code Review](REVIEW.md) | Architecture, SOLID, testing, authorization checklist |
@@ -89,7 +90,7 @@ See [docs/getting-started.md](docs/getting-started.md) for detailed setup and fi
 
 | URL | Description |
 |---|---|
-| `/graphql` | Apollo Sandbox |
+| `/graphql` | GraphiQL |
 | `/api` | Swagger UI (REST API) |
 | `/mcp` | MCP endpoint (POST) |
 | `/health` | Health check |
@@ -101,7 +102,7 @@ See [docs/getting-started.md](docs/getting-started.md) for detailed setup and fi
 |---|---|
 | Framework | NestJS 11 |
 | Language | TypeScript 5.9 (strict) |
-| GraphQL | Apollo Federation v2 + @nestjs/graphql |
+| GraphQL | Yoga Federation v2 + @nestjs/graphql |
 | Database | PostgreSQL 17 + Prisma 7 |
 | Auth | JWT + Passport + CASL |
 | Cache | In-memory (BentoCache-ready) |

@@ -32,6 +32,9 @@ npm run seed
 
 # 7. Start development server
 npm run start:dev
+
+# 8. (Optional) Start Revisium standalone for dictionary service
+npm run revisium:standalone
 ```
 
 ## Endpoints

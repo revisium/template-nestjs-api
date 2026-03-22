@@ -1,38 +1,49 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { CACHE_SERVICE_TOKEN } from '../cache.constants';
-import { ICacheService } from '../cache.interface';
-
-const AUTH_CACHE_TAGS = {
-  ALL: 'auth',
-  ROLE_PERMISSIONS: (roleId: string) => `auth:role:${roleId}`,
-};
-
-const AUTH_CACHE_KEYS = {
-  ROLE_PERMISSIONS: (roleId: string) => `auth:role:permissions:${roleId}`,
-};
-
-const HOURS_PER_DAY = 24;
-const MS_PER_HOUR = 3600000;
-const AUTH_CACHE_TTL_MS = HOURS_PER_DAY * MS_PER_HOUR;
+import { Injectable } from '@nestjs/common';
+import { CacheService } from './cache.service';
+import {
+  AUTH_CACHE_CONFIG,
+  AUTH_CACHE_KEYS,
+  AUTH_CACHE_TAGS,
+} from '../constants/auth-cache.constants';
+import { makeCacheKeyFromArgs } from '../utils/stable-cache-key';
 
 @Injectable()
 export class AuthCacheService {
-  constructor(@Inject(CACHE_SERVICE_TOKEN) private readonly cache: ICacheService) {}
+  constructor(private readonly cache: CacheService) {}
 
-  async rolePermissions<T>(roleId: string, factory: () => Promise<T>): Promise<T> {
+  public async rolePermissions<T>(role: string, factory: () => Promise<T>) {
     return this.cache.getOrSet({
-      key: AUTH_CACHE_KEYS.ROLE_PERMISSIONS(roleId),
-      ttlMs: AUTH_CACHE_TTL_MS,
-      tags: [AUTH_CACHE_TAGS.ALL, AUTH_CACHE_TAGS.ROLE_PERMISSIONS(roleId)],
+      key: AUTH_CACHE_KEYS.ROLE_PERMISSIONS(role),
+      ttl: AUTH_CACHE_CONFIG.ROLE_PERMISSIONS_TTL,
+      tags: [AUTH_CACHE_TAGS.AUTH_RELATIVES, AUTH_CACHE_TAGS.DICTIONARIES],
       factory,
     });
   }
 
-  async invalidateRole(roleId: string): Promise<void> {
-    await this.cache.deleteByTag(AUTH_CACHE_TAGS.ROLE_PERMISSIONS(roleId));
+  public async checkSystemPermission<T>(query: { userId?: string }, factory: () => Promise<T>) {
+    return this.cache.getOrSet({
+      key: makeCacheKeyFromArgs([query], {
+        prefix: AUTH_CACHE_KEYS.CHECK_SYSTEM_PERMISSION,
+        version: AUTH_CACHE_CONFIG.KEY_VERSION,
+      }),
+      ttl: AUTH_CACHE_CONFIG.PERMISSION_CHECK_TTL,
+      tags: [
+        AUTH_CACHE_TAGS.AUTH_RELATIVES,
+        ...(query.userId ? [AUTH_CACHE_TAGS.USER_PERMISSIONS(query.userId)] : []),
+      ],
+      factory,
+    });
   }
 
-  async invalidateAll(): Promise<void> {
-    await this.cache.deleteByTag(AUTH_CACHE_TAGS.ALL);
+  public async invalidateUserPermissions(userId: string) {
+    await this.cache.deleteByTag({ tags: [AUTH_CACHE_TAGS.USER_PERMISSIONS(userId)] });
+  }
+
+  public async invalidateAllAuthCaches() {
+    await this.cache.deleteByTag({ tags: [AUTH_CACHE_TAGS.AUTH_RELATIVES] });
+  }
+
+  public async invalidateDictionaries() {
+    await this.cache.deleteByTag({ tags: [AUTH_CACHE_TAGS.DICTIONARIES] });
   }
 }
