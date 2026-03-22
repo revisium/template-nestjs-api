@@ -10,6 +10,7 @@ import { GracefulShutdownModule } from './infrastructure/graceful-shutdown/grace
 import { AuthModule } from './features/auth/auth.module';
 import { OAuthModule } from './features/oauth/oauth.module';
 import { TaskModule } from './features/task/task.module';
+import { DictionaryModule } from './features/dictionary/dictionary.module';
 import { GraphqlApiModule } from './api/graphql-api/graphql-api.module';
 import { RestApiModule } from './api/rest-api/rest-api.module';
 import { McpModule } from './api/mcp-api/mcp.module';
@@ -29,6 +30,7 @@ import { McpModule } from './api/mcp-api/mcp.module';
     AuthModule,
     OAuthModule,
     TaskModule,
+    DictionaryModule,
 
     GraphqlApiModule,
     RestApiModule,

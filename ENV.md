@@ -58,6 +58,15 @@
 | `METRICS_ENABLED` | `false` | Enable Prometheus metrics at `/metrics` |
 | `GRACEFUL_SHUTDOWN_TIMEOUT` | `10000` | Delay before shutdown completes (ms) |
 
+## Revisium (Dictionary Service)
+
+| Variable | Default | Description |
+|---|---|---|
+| `REVISIUM_URL` | — | Revisium connection URL (`revisium://user@host/org/project/branch/revision`) |
+| `REVISIUM_API_URL` | — | Revisium REST API base URL |
+| `REVISIUM_USERNAME` | `admin` | Revisium login username |
+| `REVISIUM_PASSWORD` | `admin` | Revisium login password |
+
 ## Deprecated
 
 _None yet. Mark deprecated variables here before removing them._

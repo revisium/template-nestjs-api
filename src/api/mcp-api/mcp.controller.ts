@@ -15,6 +15,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { McpServerService } from './mcp-server.service';
 import { McpAuthService } from './mcp-auth.service';
+import { coerceJsonRpcBody } from './coerce-stringified-args';
 
 @ApiExcludeController()
 @Controller('mcp')
@@ -41,7 +42,7 @@ export class McpController {
       this.mcpServer.registerTools(server, userContext);
 
       await server.connect(transport);
-      await transport.handleRequest(req, res, req.body);
+      await transport.handleRequest(req, res, coerceJsonRpcBody(req.body));
     } catch (error) {
       if (res.headersSent) return;
 

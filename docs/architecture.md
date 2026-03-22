@@ -48,7 +48,7 @@ All three call the same `TaskApiService` facade. Business logic lives only in co
 ```
 src/
 ├── api/               # API layers (GraphQL, REST, MCP)
-│   ├── graphql-api/   # Apollo Federation resolvers
+│   ├── graphql-api/   # Yoga Federation resolvers
 │   ├── rest-api/      # Swagger controllers
 │   └── mcp-api/       # MCP tools
 ├── features/          # Business logic (CQRS domains)

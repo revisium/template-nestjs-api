@@ -2,12 +2,11 @@
 
 ## Setup
 
-Uses **Apollo Federation v2** driver (`@nestjs/apollo`) with code-first approach.
+Uses **Yoga Federation v2** driver (`@graphql-yoga/nestjs-federation`) with code-first approach.
 
 Configuration in `src/api/graphql-api/graphql-api.module.ts`:
 - `autoSchemaFile: { federation: 2 }` — generates federated schema from TypeScript decorators
-- `playground: false` — GraphQL Playground disabled, Apollo Sandbox enabled via landing page plugin
-- `ApolloServerPluginLandingPageLocalDefault()` — Apollo Sandbox at `/graphql`
+- GraphiQL playground at `/graphql`
 
 ## Adding a New Resolver
 

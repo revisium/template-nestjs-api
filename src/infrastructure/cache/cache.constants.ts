@@ -1,1 +1,0 @@
-export const CACHE_SERVICE_TOKEN = 'CACHE_SERVICE';
