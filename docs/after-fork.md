@@ -55,9 +55,25 @@ npm run start:dev    # Server starts
 2. Add secrets to GitHub repo settings:
    - `DOCKERHUB_USERNAME`
    - `DOCKERHUB_TOKEN` ([create token](https://hub.docker.com/settings/security))
-3. Update `.github/workflows/build.yml`:
-   - Replace `your-registry/your-project` with your image name
-   - Uncomment `branches: [master]` line to enable builds on push to master
+
+The build workflow uses `revisium-actions` and publishes `${DOCKERHUB_USERNAME}/${repository-name}` from `docker/Dockerfile`.
+
+### Kubernetes Deploy (optional)
+
+Add GitHub settings before enabling production deploys:
+
+- Secret: `KUBE_CONFIG`
+- Variables: `KUBE_NAMESPACE`, `KUBE_SERVICE_NAME`
+- Optional variable: `KUBE_APP_URL`
+
+The deploy workflow runs manually or after a successful `Build` workflow on `master`.
+
+### Release Train (optional)
+
+The release workflow uses `revisium-actions` release transitions instead of the old local bump-version workflow. To allow write mode (`dry_run=false`), configure:
+
+- Variable: `RELEASE_BOT_CLIENT_ID`
+- Secret: `RELEASE_BOT_PRIVATE_KEY`
 
 ### SonarCloud (recommended)
 
@@ -82,7 +98,7 @@ npm run start:dev    # Server starts
 
 ### Container Registry (alternative to Docker Hub)
 
-If using GitHub Container Registry instead:
+The included reusable workflow is configured for Docker Hub. If using GitHub Container Registry instead, replace `.github/workflows/build.yml` with a local Docker build workflow such as:
 ```yaml
 # .github/workflows/build.yml
 - name: Login to GHCR
